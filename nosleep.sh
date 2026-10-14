@@ -1,6 +1,6 @@
 #!/bin/bash
 # nosleep.sh - keep a Mac awake using the built-in `caffeinate` tool,
-# and log every sleep attempt.
+# and print every sleep attempt on screen.
 #
 # Usage:
 #   ./nosleep.sh                 Stay awake until you press Ctrl+C
@@ -8,11 +8,10 @@
 #   ./nosleep.sh -p <PID>        Stay awake while a process is running
 #   ./nosleep.sh -- <command>    Stay awake while a command runs
 #   ./nosleep.sh -d              Also keep the display on (combine with any above)
-#   ./nosleep.sh -l <file>       Log file (default: ~/Library/Logs/nosleep.log)
 #
 # Without -d, the screen may turn off but the system will not sleep.
 #
-# Logged events:
+# Printed events:
 #   - Idle sleep blocked: you were idle past the system sleep timer, and
 #     caffeinate stopped the Mac from sleeping.
 #   - Slept anyway: sleep that caffeinate can't block (lid closed, Apple menu >
@@ -21,10 +20,9 @@
 set -euo pipefail
 
 POLL=10   # seconds between checks
-logfile="$HOME/Library/Logs/nosleep.log"
 
 usage() {
-  sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'
   exit "${1:-0}"
 }
 
@@ -40,10 +38,7 @@ to_seconds() {
 }
 
 log() {
-  local line
-  line="$(date '+%Y-%m-%d %H:%M:%S') $*"
-  echo "$line"
-  echo "$line" >> "$logfile"
+  echo "$(date '+%Y-%m-%d %H:%M:%S') $*"
 }
 
 # Seconds since the last keyboard/mouse input.
@@ -109,14 +104,11 @@ while [[ $# -gt 0 ]]; do
     -d) flags="${flags}d"; shift ;;
     -t) duration="$(to_seconds "${2:?missing duration}")"; shift 2 ;;
     -p) pid="${2:?missing PID}"; shift 2 ;;
-    -l) logfile="${2:?missing log file}"; shift 2 ;;
     -h|--help) usage 0 ;;
     --) shift; break ;;
     *) echo "Unknown option: $1" >&2; usage 1 ;;
   esac
 done
-
-mkdir -p "$(dirname "$logfile")"
 
 args=("$flags")
 [[ -n "$duration" ]] && args+=(-t "$duration")
@@ -131,7 +123,6 @@ elif [[ -n "$pid" ]]; then
 else
   log "Started: keeping Mac awake. Press Ctrl+C to stop."
 fi
-echo "Logging sleep attempts to $logfile"
 
 monitor &
 monitor_pid=$!
